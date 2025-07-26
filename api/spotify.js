@@ -18,15 +18,27 @@ const getRandomSearch = () => {
 
 const getApiAuth = () => `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`;
 
+const getBaseUrl = (req) => {
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.FRONTEND_URI;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  const host = req.headers['x-forwarded-host'] || req.headers['host'];
+  return `https://${host}`;
+};
+
 const handleLogin = (req, res) => {
   const state = generateRandomString(16);
-  const stateKey = 'spotify_auth_state';
+  const baseUrl = getBaseUrl(req);
+  const redirect_uri = `${baseUrl}/api/spotify?action=callback`;
 
   const scope = 'user-read-private user-read-email playlist-read-private';
   const queryParams = querystring.stringify({
     client_id: process.env.SPOTIFY_CLIENT_ID,
     response_type: 'code',
-    redirect_uri: `${process.env.FRONTEND_URI}/api/spotify?action=callback`,
+    redirect_uri: redirect_uri,
     state: state,
     scope: scope,
   });
@@ -36,6 +48,8 @@ const handleLogin = (req, res) => {
 
 const handleCallback = async (req, res) => {
   const code = req.query.code || null;
+  const baseUrl = getBaseUrl(req);
+  const redirect_uri = `${baseUrl}/api/spotify?action=callback`;
 
   try {
     const response = await axios({
@@ -44,7 +58,7 @@ const handleCallback = async (req, res) => {
       data: querystring.stringify({
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: `${process.env.FRONTEND_URI}/api/spotify?action=callback`,
+        redirect_uri: redirect_uri,
       }),
       headers: {
         'content-type': 'application/x-www-form-urlencoded',
@@ -55,9 +69,9 @@ const handleCallback = async (req, res) => {
     if (response.status === 200) {
       const { access_token, refresh_token, expires_in } = response.data;
       const queryParams = querystring.stringify({ access_token, refresh_token, expires_in });
-      res.redirect(`${process.env.FRONTEND_URI}/?${queryParams}`);
+      res.redirect(`${baseUrl}/?${queryParams}`);
     } else {
-      res.redirect(`${process.env.FRONTEND_URI}/?error=invalid_token`);
+      res.redirect(`${baseUrl}/?error=invalid_token`);
     }
   } catch (error) {
     res.status(500).send(error.message);
