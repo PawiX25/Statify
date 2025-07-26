@@ -22,11 +22,12 @@ const getBaseUrl = (req) => {
   if (process.env.NODE_ENV === 'development') {
     return process.env.FRONTEND_URI;
   }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  const host = req.headers['x-forwarded-host'] || req.headers['host'];
-  return `https://${host}`;
+  
+  const baseUrl = process.env.VERCEL_ENV === 'production'
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : `https://${process.env.VERCEL_URL}`;
+
+  return baseUrl;
 };
 
 const handleLogin = (req, res) => {
