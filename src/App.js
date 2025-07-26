@@ -34,7 +34,7 @@ function App() {
   }, []);
 
   const handleLogin = () => {
-    window.location.href = 'http://127.0.0.1:8888/login';
+    window.location.href = '/api/spotify?action=login';
   };
 
   const handleLogout = () => {
